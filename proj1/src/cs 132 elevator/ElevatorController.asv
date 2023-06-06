@@ -1,0 +1,335 @@
+classdef ElevatorController < handle
+    properties(Access = public)
+        Back
+        elevator_1
+        elevator_2
+        elevatorInUI_1
+        elevatorInUI_2
+        elevatorOutUI_1
+        elevatorOutUI_2
+        elevatorOutUI_3
+        floor
+        Timer
+        openTime
+        task = [0, 0, 0, 0];
+     end
+    
+    methods
+        function obj=ElevatorController(floor, openTime)
+            obj.floor = floor;
+            obj.openTime = openTime;
+        end
+        
+        function startTimer(control)
+            if ~strcmp(control.Timer.Running,'on')
+                start(control.Timer);
+            end
+        end
+        
+        function dis = dis(control, id, floor)
+            pos1 = control.elevator_1.position;
+            pos2 = control.elevator_2.position;
+            switch id
+                case 1
+                    dis = floor - pos1;
+                    if (dis < 0)
+                        dis = -dis;
+                    end
+                case 2
+                    dis = floor - pos2;
+                    if (dis < 0)
+                        dis = -dis;
+                    end
+            end
+        end
+
+        function ret = goto(control, id, floor)
+            if (floor<0 || floor >2)
+                return;
+            end
+            
+            switch id
+                case 0
+                    if(control.elevator_1.position == floor && control.elevator_1.Alarm == 0)
+                        control.openDoorAtFloor(1, floor);
+                        ret = 1;
+                    elseif(control.elevator_2.position == floor && control.elevator_2.Alarm == 0)
+                        control.openDoorAtFloor(2, floor);
+                        ret = 1;
+                    else                        
+                        if (strcmp(control.elevator_1.direction, 'idle') && dis(control, 1, floor) <= dis(control, 2, floor) && control.elevator_1.Alarm == 0)
+                            control.elevator_1.setDestination(floor);
+                        elseif (strcmp(control.elevator_2.direction, 'idle') && dis(control, 1, floor) >= dis(control, 2, floor) && control.elevator_2.Alarm == 0)
+                            control.elevator_2.setDestination(floor);
+                        else
+                            control.task(floor+2)=1;
+                        end
+                        ret = 0;
+                    end
+                case 1
+                    if(control.elevator_1.position == floor && control.elevator_1.Alarm == 0)
+                        control.openDoorAtFloor(1, floor);
+                        ret = 1;
+                    else
+                        if strcmp(control.elevator_1.direction, 'idle') && control.elevator_1.Alarm == 0
+                            control.elevator_1.setDestination(floor);
+                        else
+                            control.elevator_1.task(floor+2)=1;
+                        end
+                        ret = 0;
+                    end
+                case 2
+                    if(control.elevator_2.position == floor && control.elevator_2.Alarm == 0)
+                        control.openDoorAtFloor(2, floor);
+                        ret = 1;
+                    else
+                        if strcmp(control.elevator_2.direction, 'idle') && control.elevator_2.Alarm == 0
+                            control.elevator_2.setDestination(floor);
+                        else
+                            control.elevator_2.task(floor+2)=1;
+                        end
+                        ret = 0;
+                    end
+            end
+            control.startTimer();
+            
+        end
+        
+        function ret = getAlarmValue(control, id)
+            if id == 1
+                ret = control.elevator_1.Alarm;
+            else
+                ret = control.elevator_2.Alarm;
+            end
+        end
+
+        function openDoorAtFloor(control, id, pos)
+            control.startTimer();
+
+            switch id
+                case 1
+                    control.elevator_1.state = control.elevator_1.state + control.openTime;
+                    control.elevatorInUI_1.openDoor();
+                case 2
+                    control.elevator_2.state = control.elevator_2.state + control.openTime;
+                    control.elevatorInUI_2.openDoor();
+            end
+            
+            switch pos
+                case 0
+                    control.elevatorOutUI_1.openDoor(id);
+                    control.elevatorOutUI_1.switchLamp(id, 'on');
+                case 1
+                    control.elevatorOutUI_2.openDoor(id);
+                    control.elevatorOutUI_2.switchLamp(id, 'on');
+                case 2
+                    control.elevatorOutUI_3.openDoor(id);
+                    control.elevatorOutUI_3.switchLamp(id, 'on');
+            end
+        end
+        
+        function pushOpenDoorAtFloor(control, id, pos)
+            switch id
+                case 1
+                    h = control.elevator_1.height;
+                    if(h==pos*3)
+                        control.openDoorAtFloor(id, pos);
+                    elseif strcmp(control.elevator_1.direction, 'up') &&(h>pos*3 && h<pos*3+1.5)
+                        control.goto(id, pos+1);
+                    elseif strcmp(control.elevator_1.direction, 'up') &&(h>pos*3+1.5 && control.elevator_1.task(pos+3)==0)
+                        control.goto(id, pos+2);
+                    elseif strcmp(control.elevator_1.direction, 'down') &&(h>pos*3-1.5 && h<pos*3)
+                        control.goto(id, pos-1);
+                    elseif strcmp(control.elevator_1.direction, 'down') &&(h<pos*3-1.5 && control.elevator_1.task(pos+1)==0)
+                        control.goto(id, pos-2);
+                    end
+                    
+                case 2
+                    h = control.elevator_2.height;
+                    if(h==pos*3)
+                        control.openDoorAtFloor(id, pos);
+                    elseif strcmp(control.elevator_2.direction, 'up') &&(h>pos*3 && h<pos*3+1.5)
+                        control.goto(id, pos+1);
+                    elseif strcmp(control.elevator_2.direction, 'up') &&(h>pos*3+1.5 && control.elevator_2.task(pos+3)==0)
+                        control.goto(id, pos+2);
+                    elseif strcmp(control.elevator_2.direction, 'down') &&(h>pos*3-1.5 && h<pos*3)
+                        control.goto(id, pos-1);
+                    elseif strcmp(control.elevator_2.direction, 'down') &&(h<pos*3-1.5 && control.elevator_2.task(pos+1)==0)
+                        control.goto(id, pos-2);
+                    end
+            end
+            
+        end
+        
+        function closeDoorAtFloor(control, id, pos)   
+            switch id
+                case 1
+                    control.elevator_1.state = 0;
+                    control.elevatorInUI_1.closeDoor();
+                case 2
+                    control.elevator_2.state = 0;
+                    control.elevatorInUI_2.closeDoor();
+            end
+
+            switch pos
+                case 0
+                    control.elevatorOutUI_1.closeDoor(id);
+                    control.elevatorOutUI_1.switchLamp(id, 'off');
+                case 1
+                    control.elevatorOutUI_2.closeDoor(id);
+                    control.elevatorOutUI_2.switchLamp(id, 'off');
+                case 2
+                    control.elevatorOutUI_3.closeDoor(id);
+                    control.elevatorOutUI_3.switchLamp(id, 'off');
+            end
+        end
+       
+        function ret=getUIDirect(~, dir)
+            switch dir
+                case 'up'
+                    ret = '↑';
+                case 'down'
+                    ret = '↓';
+                case 'idle'
+                    ret = ' ';
+            end
+        end
+        
+        function updateUIDirect(control)
+            tmp = control.elevator_1.direction;
+            dir1 = control.getUIDirect(tmp);
+
+            control.elevatorInUI_1.Direction.Value = dir1;
+            control.elevatorOutUI_1.LeftDirection.Value = dir1;
+            control.elevatorOutUI_2.LeftDirection.Value = dir1;
+            control.elevatorOutUI_3.LeftDirection.Value = dir1;
+            
+            tmp = control.elevator_2.direction;
+            dir2 = control.getUIDirect(tmp);
+            control.elevatorInUI_2.Direction.Value = dir2;
+            control.elevatorOutUI_1.RightDirection.Value = dir2;
+            control.elevatorOutUI_2.RightDirection.Value = dir2;
+            control.elevatorOutUI_3.RightDirection.Value = dir2;    
+        end
+        
+        function updateOutButton(control, pos)
+            if (control.task(pos+2)==1)
+                switch pos
+                    case 0
+                        if strcmp(control.elevatorOutUI_1.Button.Enable, 'off')
+                            control.elevatorOutUI_1.Button.Enable='on';
+                        end
+                    case 1
+                        if strcmp(control.elevatorOutUI_2.upButton.Enable, 'off')
+                            control.elevatorOutUI_2.upButton.Enable='on';
+                        end
+                        if strcmp(control.elevatorOutUI_2.downButton.Enable, 'off')
+                            control.elevatorOutUI_2.downButton.Enable='on';
+                        end
+                    case 2
+                        if strcmp(control.elevatorOutUI_3.downButton.Enable, 'off')
+                            control.elevatorOutUI_3.downButton.Enable='on';
+                        end
+                end
+            end
+        end
+
+        function updateOutUI(control, h1, h2)
+            control.Back.HeightEditField.Value = h1;
+            control.Back.HeightEditField_2.Value = h2;
+            control.elevatorOutUI_1.Elevator1Gauge.Value = 1 + h1/3;
+            control.elevatorOutUI_2.Elevator1Gauge.Value = 1 + h1/3;
+            control.elevatorOutUI_3.Elevator1Gauge.Value = 1 + h1/3;
+           
+            control.elevatorOutUI_1.Elevator2Gauge.Value = 1 + h2/3;
+            control.elevatorOutUI_2.Elevator2Gauge.Value = 1 + h2/3;
+            control.elevatorOutUI_3.Elevator2Gauge.Value = 1 + h2/3;
+        end
+        
+        function timerFcn(control, ~, ~)
+            t = control.Timer.Period;
+            if (control.elevator_1.Alarm == 0)
+                if(control.elevator_1.state == 0)
+                    control.closeDoorAtFloor(1, control.elevator_1.position);
+                    control.elevator_1.move(t);
+                    control.elevatorInUI_1.update();
+                else
+                    control.elevator_1.state = control.elevator_1.state - t;
+                end
+            end
+            if (control.elevator_2.Alarm == 0)
+                if(control.elevator_2.state == 0)
+                    control.closeDoorAtFloor(2, control.elevator_2.position);
+                    control.elevator_2.move(t);
+                    control.elevatorInUI_2.update();
+                else
+                    control.elevator_2.state = control.elevator_2.state - t;
+                end
+            end
+
+            pos1 = control.elevator_1.position;
+            h1 = control.elevator_1.height;
+            pos2 = control.elevator_2.position;
+            h2 = control.elevator_2.height;
+            control.updateOutUI(h1, h2);
+            control.updateUIDirect();
+            
+            if(h1 == pos1*3 && control.elevator_1.task(pos1+2) == 1 && control.elevator_1.state==0)
+                control.openDoorAtFloor(1, pos1);
+                control.elevator_1.task(pos1+2)=0;
+                control.task(pos1+2)=0;
+                control.elevatorInUI_1.enableButton(pos1);
+                control.updateOutButton(pos1);
+            end 
+
+            if(h2==pos2*3 && control.elevator_2.task(pos2+2)==1 && control.elevator_2.state==0)
+                control.openDoorAtFloor(2, pos2);
+                control.elevator_2.task(pos2+2)=0;
+                control.task(pos2+2)=0;
+                control.elevatorInUI_2.enableButton(pos2);
+                control.updateOutButton(pos2);
+            end
+               
+            if(pos1 == control.elevator_1.destin)  
+                pos = 2;
+                while(pos > -1)
+                    if (control.elevator_1.task(pos+2)==1)
+                        control.elevator_1.setDestination(pos);
+                        break;
+                    elseif (control.task(pos+2)==1)
+                        control.elevator_1.setDestination(pos);
+                        control.task(pos+2) = 0;
+                        break; 
+                    end
+                    pos=pos-1;
+                end
+            end
+
+            if(pos2 == control.elevator_2.destin)
+                pos = -1;
+                while(pos<=2)
+                    if (control.elevator_2.task(pos+2)==1)
+                        control.elevator_2.setDestination(pos);
+                        break;
+                    elseif (control.task(pos+2)==1)
+                        control.elevator_2.setDestination(pos);
+                        control.task(pos+2) = 0;
+                        break; 
+                    end
+                    pos = pos + 1;
+                end
+            end
+
+            if(control.elevator_1.task(control.elevator_1.destin + 2) == 0)
+                control.elevator_1.direction = 'idle';
+                control.elevator_1.destin = -1;
+            end
+            
+            if(control.elevator_2.task(control.elevator_2.destin + 2) == 0)
+                control.elevator_2.direction = 'idle';
+                control.elevator_2.destin = -1;
+            end
+            control.updateUIDirect();
+        end
+    end
+end
