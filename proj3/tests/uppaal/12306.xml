@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
+<nta>
+	<declaration>// Place global declarations here.
+broadcast chan train_arr_0, train_arr_1, train_arr_2;
+int ticket_num[3] = {4,4,4};
+clock stayT;
+int train_current_pos = -1;</declaration>
+	<template>
+		<name x="5" y="5">Customer</name>
+		<declaration>// Place local declarations here.
+bool enter_station = false;
+bool exit_station = false;
+bool has_ticket = false;
+
+clock buyT; // 
+clock checkT; // 
+
+int departure = -1;
+int destination = -1;
+ 
+bool has_enough_ticket(){
+    int i; 
+    for(i = departure; i &lt; destination; i++){
+        if(ticket_num[i] &lt;= 0){
+            return false;
+        }
+    }
+    return true;
+}
+
+void book_ticket() {
+    int i;
+    for (i = departure; i &lt; destination; i++) {
+         ticket_num[i] -=1;
+    }
+}
+
+void cancel_ticket(){
+    int i;
+    for(i = departure; i &lt; destination; i++){
+        ticket_num[i] += 1;
+    }
+}</declaration>
+		<location id="id0" x="-1394" y="0">
+		</location>
+		<location id="id1" x="-1130" y="-119">
+			<name x="-1140" y="-153">depart_from_s0</name>
+			<committed/>
+		</location>
+		<location id="id2" x="-1139" y="136">
+			<name x="-1149" y="102">depart_from_s1</name>
+		</location>
+		<location id="id3" x="-926" y="-119">
+			<name x="-936" y="-153">desitination_s1</name>
+			<committed/>
+		</location>
+		<location id="id4" x="-926" y="136">
+			<name x="-936" y="102">desitination_s2</name>
+			<committed/>
+		</location>
+		<location id="id5" x="-731" y="0">
+			<name x="-741" y="-34">Try_buy_ticket</name>
+			<committed/>
+		</location>
+		<location id="id6" x="-442" y="0">
+			<name x="-452" y="-34">Lock_Ticket</name>
+			<label kind="invariant" x="-452" y="17">buyT &lt;=15</label>
+		</location>
+		<location id="id7" x="-221" y="0">
+			<name x="-231" y="-34">Get_Ticket</name>
+			<label kind="invariant" x="-306" y="17">train_current_pos &lt; departure</label>
+		</location>
+		<location id="id8" x="42" y="0">
+			<name x="32" y="-34">Check_in</name>
+		</location>
+		<location id="id9" x="433" y="0">
+			<name x="423" y="-34">Exit_station</name>
+		</location>
+		<location id="id10" x="186" y="0">
+			<name x="176" y="-34">Get_on</name>
+			<committed/>
+		</location>
+		<init ref="id0"/>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id9"/>
+			<label kind="guard" x="60" y="68">checkT &gt; 3</label>
+			<label kind="assignment" x="60" y="102">cancel_ticket(), exit_station = true, checkT = 0,has_ticket = false</label>
+			<nail x="42" y="102"/>
+			<nail x="391" y="102"/>
+		</transition>
+		<transition>
+			<source ref="id10"/>
+			<target ref="id9"/>
+			<label kind="assignment" x="204" y="0">exit_station = true, checkT = 0</label>
+		</transition>
+		<transition>
+			<source ref="id8"/>
+			<target ref="id10"/>
+			<label kind="guard" x="60" y="-34">checkT &lt; 3</label>
+			<label kind="assignment" x="60" y="0">checkT = 0</label>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-203" y="68">train_current_pos == departure</label>
+			<label kind="synchronisation" x="-203" y="85">train_arr_0?</label>
+			<label kind="assignment" x="-203" y="102">checkT = 0</label>
+			<nail x="-221" y="102"/>
+			<nail x="-51" y="102"/>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-713" y="-212">has_enough_ticket() == false</label>
+			<label kind="assignment" x="-713" y="-178">exit_station = true</label>
+			<nail x="-731" y="-178"/>
+			<nail x="26" y="-178"/>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-424" y="-144">buyT &gt;= 15</label>
+			<label kind="assignment" x="-424" y="-110">cancel_ticket(), buyT = 0, exit_station = true</label>
+			<nail x="-442" y="-110"/>
+			<nail x="34" y="-110"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id9"/>
+			<label kind="assignment" x="-203" y="-59">cancel_ticket(),exit_station = true,has_ticket = false</label>
+			<nail x="-221" y="-59"/>
+			<nail x="127" y="-59"/>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id9"/>
+			<label kind="guard" x="-1376" y="-170">train_current_pos &gt; 0 || train_current_pos &gt; 1</label>
+			<label kind="assignment" x="-1376" y="-136">exit_station = true</label>
+			<nail x="-1275" y="-272"/>
+			<nail x="68" y="-272"/>
+		</transition>
+		<transition>
+			<source ref="id7"/>
+			<target ref="id8"/>
+			<label kind="guard" x="-203" y="-34">train_current_pos == departure</label>
+			<label kind="synchronisation" x="-203" y="-17">train_arr_1?</label>
+			<label kind="assignment" x="-203" y="0">checkT = 0</label>
+		</transition>
+		<transition>
+			<source ref="id6"/>
+			<target ref="id7"/>
+			<label kind="assignment" x="-424" y="0">buyT = 0, has_ticket = true</label>
+		</transition>
+		<transition>
+			<source ref="id5"/>
+			<target ref="id6"/>
+			<label kind="guard" x="-714" y="-17">has_enough_ticket() == true</label>
+			<label kind="assignment" x="-713" y="0">book_ticket(), buyT = 0</label>
+		</transition>
+		<transition>
+			<source ref="id3"/>
+			<target ref="id5"/>
+		</transition>
+		<transition>
+			<source ref="id4"/>
+			<target ref="id5"/>
+		</transition>
+		<transition>
+			<source ref="id2"/>
+			<target ref="id4"/>
+			<label kind="assignment" x="-1121" y="136">destination = 2</label>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id4"/>
+			<label kind="assignment" x="-1112" y="8">destination = 2</label>
+		</transition>
+		<transition>
+			<source ref="id1"/>
+			<target ref="id3"/>
+			<label kind="assignment" x="-1112" y="-119">destination = 1</label>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-1376" y="34">train_current_pos &lt; 1</label>
+			<label kind="assignment" x="-1377" y="68">enter_station = true, departure = 1</label>
+			<nail x="-1258" y="136"/>
+		</transition>
+		<transition>
+			<source ref="id0"/>
+			<target ref="id1"/>
+			<label kind="guard" x="-1376" y="-93">train_current_pos &lt; 0</label>
+			<label kind="assignment" x="-1377" y="-59">enter_station = true, departure = 0</label>
+			<nail x="-1266" y="-119"/>
+		</transition>
+	</template>
+	<template>
+		<name>Train</name>
+		<location id="id11" x="-178" y="85">
+		</location>
+		<location id="id12" x="102" y="85">
+			<name x="92" y="51">station_0</name>
+			<label kind="invariant" x="92" y="102">stayT &lt;= 3</label>
+		</location>
+		<location id="id13" x="425" y="85">
+			<name x="415" y="51">station_1</name>
+			<label kind="invariant" x="415" y="102">stayT &lt;= 3</label>
+		</location>
+		<location id="id14" x="714" y="85">
+			<name x="705" y="51">station_2</name>
+			<label kind="invariant" x="704" y="102">stayT &lt;= 3</label>
+		</location>
+		<init ref="id11"/>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id14"/>
+			<label kind="synchronisation" x="467" y="68">train_arr_2!</label>
+			<label kind="assignment" x="467" y="85">stayT = 0, train_current_pos = 2</label>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="synchronisation" x="179" y="68">train_arr_1!</label>
+			<label kind="assignment" x="179" y="85">stayT= 0, train_current_pos = 1</label>
+		</transition>
+		<transition>
+			<source ref="id11"/>
+			<target ref="id12"/>
+			<label kind="synchronisation" x="-153" y="68">train_arr_0!</label>
+			<label kind="assignment" x="-153" y="85">stayT = 0, train_current_pos = 0</label>
+		</transition>
+	</template>
+	<system>// Place template instantiations here.
+customer1 = Customer();
+customer2 = Customer();
+customer3 = Customer();
+customer4 = Customer();
+customer5 = Customer();
+train = Train();
+// List one or more processes to be composed into a system.
+system customer1,customer2,customer3,customer4,customer5,train;
+    </system>
+	<queries>
+		<query>
+			<formula>A&lt;&gt; customer1.enter_station imply customer1.exit_station</formula>
+			<comment></comment>
+		</query>
+		<query>
+			<formula>A[] ticket_num[0] &gt;= 0 &amp;&amp; ticket_num[1] &gt;= 0 &amp;&amp; ticket_num[2] &gt;= 0 &amp;&amp; ticket_num[0] &lt;= 4 &amp;&amp; ticket_num[1] &lt;= 4 &amp;&amp; ticket_num[2] &lt;= 4</formula>
+			<comment></comment>
+		</query>
+		<query>
+			<formula>A[] (customer1.departure == 1 &amp;&amp; customer1.destination == 2 &amp;&amp; customer1.has_ticket == true &amp;&amp; customer2.departure == 1 &amp;&amp; customer2.destination == 2 &amp;&amp; customer2.has_ticket == true &amp;&amp; customer3.departure == 1 &amp;&amp; customer3.destination == 2 &amp;&amp; customer3.has_ticket == true &amp;&amp; customer4.departure == 1 &amp;&amp; customer4.destination == 2 &amp;&amp; customer4.has_ticket == true &amp;&amp; customer5.departure == 1 &amp;&amp; customer5.destination == 2 ) imply customer5.has_ticket == false</formula>
+			<comment></comment>
+		</query>
+		<query>
+			<formula>A[] customer1.Get_on imply stayT &lt;= 3</formula>
+			<comment></comment>
+		</query>
+	</queries>
+</nta>
